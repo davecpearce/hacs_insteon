@@ -83,11 +83,30 @@ Pinned requirements match core exactly: `pyinsteon==1.6.4`,
 
 ## Installation
 
-1. HACS → Integrations → ⋮ → **Custom repositories** → add this repo, category *Integration*.
-2. Install **Insteon (extended)**, restart Home Assistant.
-3. Your existing Insteon config entry is picked up as-is; nothing to reconfigure.
+The repository URL to add in HACS is:
 
-To go back to core, uninstall in HACS and restart. The config entry survives.
+```
+https://github.com/davecpearce/hacs_insteon
+```
+
+1. In Home Assistant open **HACS**, click the **⋮** menu in the top right, choose
+   **Custom repositories**.
+2. Paste the URL above, set **Type** to *Integration*, click **Add**.
+3. Search HACS for **Insteon**, open it, click **Download**, pick the latest release.
+4. If you previously ran this integration from a hand-copied `custom_components/insteon`,
+   HACS overwrites that same directory. Nothing else to move.
+5. Restart Home Assistant.
+
+Your existing Insteon config entry, devices, entity IDs, and any renames are picked up
+as-is: Home Assistant identifies the integration by its domain (`insteon`) and each entity
+by its unique ID, and neither changes. HACS's display name in `hacs.json` is never read by
+Home Assistant.
+
+**Before the first install on a production system:** take a full Home Assistant backup,
+and keep a copy of the current `custom_components/insteon` directory so you can drop it
+back in if needed.
+
+To go back to core, remove the integration in HACS and restart. The config entry survives.
 
 ## Development
 

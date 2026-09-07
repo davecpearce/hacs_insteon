@@ -174,8 +174,7 @@ async def websocket_get_properties(
         notify_device_not_found(connection, msg, INSTEON_DEVICE_NOT_FOUND)
         return
 
-    # Fork: always expose advanced properties in the panel.
-    properties, schema = get_properties(device, True)
+    properties, schema = get_properties(device, msg[SHOW_ADVANCED])
 
     connection.send_result(msg[ID], {"properties": properties, "schema": schema})
 

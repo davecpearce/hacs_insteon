@@ -46,14 +46,19 @@ core `2026.9.1`, which v1.1 is based on.
 |---|---|---|
 | `services.py`, `schemas.py`, `const.py`, `services.yaml`, `strings.json` | `update_property` action | Feature |
 | `compat.py`, `api/config.py`, `api/properties.py` | Schema serialisation goes through a shim that imports `probatio` (HA 2026.9+) and falls back to `voluptuous_serialize` (HA 2026.8) | One build runs on both HA versions |
-| `api/properties.py` | Panel always shows advanced properties (ignores the `show_advanced` toggle) | Feature |
 | `light.py` | Debug logging of brightness in `brightness` and `async_turn_on` | Harmless diagnostics |
 | `manifest.json` | Adds `version` and `issue_tracker`, points `documentation` at this repo | Required for custom components |
 | `brand/` | Insteon icon, the same asset core uses | Required by HACS |
 
 Everything else is byte-identical to core 2026.9.1.
 
-## Changes in v1.1
+## Changes in v1.1.1
+
+- **The Insteon panel's "show advanced" toggle works as in core again.** The old fork
+  forced advanced properties on. Dropping that removes the last behavioural divergence
+  from core and makes core's own test suite pass in full against this integration.
+
+## Changes in v1.1.0
 
 - **Loads on Home Assistant 2026.9.** Core removed `voluptuous_serialize` in 2026.9;
   the shim above picks whichever serialiser the running core ships.
@@ -124,6 +129,5 @@ scripts/run-upstream-tests.sh 2026.8.3
 
 Each run clones core at that tag, builds a venv, generates translations, runs the
 suite on stock core for a baseline, then again with this `custom_components/insteon`
-swapped in. Expected result for v1.1: everything stock passes also passes here, except
-the three tests that assert the stock "hide advanced properties" behaviour, which this
-fork overrides on purpose. See the release notes for the exact numbers per tag.
+swapped in. Expected result: everything stock passes also passes here, plus this
+repo's own tests. See the release notes for the exact numbers per tag.

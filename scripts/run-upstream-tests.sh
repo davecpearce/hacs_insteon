@@ -41,15 +41,24 @@ PY
     -e . -r requirements_test.txt -r .insteon-test-reqs.txt
 fi
 
+# The harness checks that every registered service has translations. Those are
+# generated from strings.json, so build them or every setup test errors at
+# teardown. Rebuilt on each run so this fork's strings.json changes are covered.
+build_translations() { .venv/bin/python -m script.translations develop --all > /dev/null 2>&1; }
+
 run() { .venv/bin/python -m pytest tests/components/insteon/ -q -p no:cacheprovider --no-header --timeout=120 "$@" 2>&1 | tail -30; }
 
 echo "===== STOCK core $TAG ====="
 git checkout -q -- homeassistant/components/insteon
+build_translations
 run || true
 
 echo
 echo "===== FORK over core $TAG ====="
 rm -rf homeassistant/components/insteon
 cp -R "$REPO/custom_components/insteon" homeassistant/components/insteon
+cp "$REPO"/tests/test_*.py tests/components/insteon/
+build_translations
 run || true
 git checkout -q -- homeassistant/components/insteon 2>/dev/null || true
+rm -f tests/components/insteon/test_update_property_service.py

@@ -141,34 +141,11 @@ update_property:
           integration: insteon
     prop_name:
       required: true
+      example: "led_off"
       selector:
-        select:
-          options:
-            - "backlight"
-            - "led_dimming"
-            - "led_off"
-            - "load_button"
-            - "momentary_delay"
-            - "momentary_mode"
-            - "momentary_none"
-            - "momentary_off"
-            - "momentary_on"
-            - "momentary_on_off"
-            - "on_level"
-            - "program_lock"
-            - "program_lock_off"
-            - "program_lock_on"
-            - "radio_button_groups"
-            - "ramp_rate"
-            - "relay_mode"
-            - "toggle_mode"
-            - "transmit_none"
-            - "transmit_off_only"
-            - "transmit_on_off"
-            - "transmit_on_only"
-            - "x10_house"
-            - "x10_unit"
+        text:
     prop_value:
       required: true
+      example: "true"
       selector:
         text:

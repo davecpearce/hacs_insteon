@@ -40,46 +40,49 @@ the device rejects the write.
 ## Other differences from core
 
 Documented here so they are deliberate rather than accidental. Measured against
-core `2026.8.3`.
+core `2026.9.1`, which v1.1 is based on.
 
-| Area | Change | Status |
+| Area | Change | Why |
 |---|---|---|
-| `services.py`, `schemas.py`, `const.py`, `services.yaml` | `update_property` service | **Feature** |
+| `services.py`, `schemas.py`, `const.py`, `services.yaml`, `strings.json` | `update_property` action | Feature |
+| `compat.py`, `api/config.py`, `api/properties.py` | Schema serialisation goes through a shim that imports `probatio` (HA 2026.9+) and falls back to `voluptuous_serialize` (HA 2026.8) | One build runs on both HA versions |
 | `api/properties.py` | Panel always shows advanced properties (ignores the `show_advanced` toggle) | Feature |
-| `api/properties.py` | Websocket property update looks up `operating_flags` / `properties` directly instead of `device.configuration`, logs a missing property instead of raising | **Drift, and a bug**: see Known issues |
-| `light.py` | Debug logging of brightness in `brightness` and `async_turn_on` | Harmless |
-| `__init__.py` | Leftover YAML-import options migration (`SOURCE_IMPORT`) | Dead code; never triggers |
-| `entity.py`, `utils.py`, `api/aldb.py`, `api/config.py`, `services.py` | Uses `via_device=` and `async_get_device(identifiers=)` instead of core's `via_device_id=` / `async_get_device_by_identifier(..., config_entry_id)` | Drift; `via_device` is deprecated in 2026.8 and removed in 2027.8. To be re-aligned in v1.1 |
-| `manifest.json` | Adds `version` and `issue_tracker` (required for custom components), points `documentation` at this repo, drops `@connorgallopo` from codeowners | Packaging |
+| `light.py` | Debug logging of brightness in `brightness` and `async_turn_on` | Harmless diagnostics |
+| `manifest.json` | Adds `version` and `issue_tracker`, points `documentation` at this repo | Required for custom components |
+| `brand/` | Insteon icon, the same asset core uses | Required by HACS |
 
-`api/scenes.py` is byte-identical to core and is **not** a fork addition.
+Everything else is byte-identical to core 2026.9.1.
 
-## Known issues in v1.0
+## Changes in v1.1
 
-v1.0 is deliberately behaviour-identical to the fork it came from, so these ship as-is and
-are fixed in v1.1. Found by running core's own `tests/components/insteon/` suite against
-the fork (see Development).
-
-- **Panel property editor drops derived properties.** `pyinsteon` exposes some settings
-  only through `device.configuration` (`radio_button_groups`, `momentary_delay`,
-  `relay_mode`, per-button toggle modes, ramp rate in seconds). The fork's websocket
-  handler and the `update_property` service look only in `operating_flags` and
-  `properties`, so saving one of these from the Insteon panel logs
-  `Property <name> could not be found` and changes nothing. Raw operating flags such as
-  `led_off` and raw extended properties such as `led_dimming` and `on_level` still work,
-  which is why the LED automation is unaffected.
-- **`via_device` deprecation warning** at startup on 2026.8+. Harmless until 2027.8.
-- **Does not load on HA 2026.9** (`voluptuous_serialize` removed from core).
+- **Loads on Home Assistant 2026.9.** Core removed `voluptuous_serialize` in 2026.9;
+  the shim above picks whichever serialiser the running core ships.
+- **Merged upstream 2026.9.** The panel's device view now receives category, model,
+  firmware and button data, as the pinned frontend expects.
+- **Fixed: the property editor dropped derived settings.** v1.0's panel handler and
+  `update_property` action only looked in `operating_flags` and `properties`, so
+  `radio_button_groups`, `momentary_delay`, `relay_mode`, per-button toggle modes and
+  ramp rate in seconds logged "could not be found" and changed nothing. Both now use
+  `device.configuration`, the union pyinsteon maintains.
+- **`update_property` parses values by the property's type**: booleans accept
+  true/false/on/off/yes/no/1/0, integers and floats are parsed, and mode properties
+  accept their mode name. Bad input raises a validation error before anything is
+  written, and a rejected write no longer saves the device store.
+- **Dropped drift from the old fork**: the deprecated `via_device` argument (removal
+  scheduled for HA 2027.8), the pre-2026 device-registry lookups, and dead YAML-import
+  code in `__init__.py`.
+- **Tests** for the action live in `tests/` and run under core's own harness.
 
 ## Compatibility
 
 | Release | Home Assistant | Notes |
 |---|---|---|
-| v1.0.x | 2026.8.x only | Behaviour-identical to the pre-HACS fork. **Does not load on 2026.9** (`voluptuous_serialize` was removed from core). |
-| v1.1.x | 2026.8.x and 2026.9+ | Planned: `probatio` shim for the serializer, merge upstream `api/device.py` fields, re-align the drift above. |
+| v1.1.x | 2026.8.x and 2026.9.x | Based on core 2026.9.1. Verified against core's own Insteon test suite at both 2026.8.3 and 2026.9.1. |
+| v1.0.x | 2026.8.x only | Behaviour-identical to the pre-HACS fork. Does not load on 2026.9. |
 
 Pinned requirements match core exactly: `pyinsteon==1.6.4`,
-`insteon-frontend-home-assistant==0.6.2`.
+`insteon-frontend-home-assistant==0.6.2`. `probatio` is not declared as a requirement
+on purpose: core pins it, and pinning it here would fight core's pin on future releases.
 
 ## Installation
 
@@ -110,21 +113,17 @@ To go back to core, remove the integration in HACS and restart. The config entry
 
 ## Development
 
-The fork carries no tests of its own yet. Core's suite in `tests/components/insteon/`
-mocks `pyinsteon` and runs without a PLM, so it is the strongest check available:
+Core's suite in `tests/components/insteon/` mocks `pyinsteon` and runs without a PLM,
+so it is the strongest check available. This repo's own tests in `tests/` are copied
+alongside it.
 
 ```bash
+scripts/run-upstream-tests.sh 2026.9.1
 scripts/run-upstream-tests.sh 2026.8.3
 ```
 
-This clones core at that tag, builds a venv, runs the suite on stock core for a baseline,
-then again with this `custom_components/insteon` swapped in. Baseline at core 2026.8.3:
-
-| | passed | failed | errors |
-|---|---|---|---|
-| stock core | 79 | 0 | 7 (environmental: translation checks, config-flow teardown) |
-| this fork | 70 | 9 | 8 (the same 7, plus one lingering-task teardown) |
-
-Of the 9 fork failures, 3 are the deliberate "always show advanced" change, 1 is the
-`async_device_name` signature (2 args vs core's 3), and 5 are the property-editor bug
-listed under Known issues.
+Each run clones core at that tag, builds a venv, generates translations, runs the
+suite on stock core for a baseline, then again with this `custom_components/insteon`
+swapped in. Expected result for v1.1: everything stock passes also passes here, except
+the three tests that assert the stock "hide advanced properties" behaviour, which this
+fork overrides on purpose. See the release notes for the exact numbers per tag.

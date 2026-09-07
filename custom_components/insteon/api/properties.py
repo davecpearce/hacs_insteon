@@ -1,6 +1,5 @@
 """Property update methods and schemas."""
 
-import logging
 from typing import Any
 
 from pyinsteon import devices
@@ -19,12 +18,12 @@ from pyinsteon.constants import (
 )
 from pyinsteon.device_types.device_base import Device
 import voluptuous as vol
-import voluptuous_serialize
 
 from homeassistant.components import websocket_api
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import config_validation as cv
 
+from ..compat import to_field_list
 from ..const import (
     DEVICE_ADDRESS,
     ID,
@@ -42,30 +41,28 @@ RAMP_RATE_LIST = [str(seconds) for seconds in RAMP_RATE_SECONDS]
 TOGGLE_MODES = [str(ToggleMode(v)).lower() for v in list(ToggleMode)]
 RELAY_MODES = [str(RelayMode(v)).lower() for v in list(RelayMode)]
 
-_LOGGER = logging.getLogger(__name__)
-
 
 def _bool_schema(name):
-    return voluptuous_serialize.convert(vol.Schema({vol.Required(name): bool}))[0]
+    return to_field_list(vol.Schema({vol.Required(name): bool}))[0]
 
 
 def _byte_schema(name):
-    return voluptuous_serialize.convert(vol.Schema({vol.Required(name): cv.byte}))[0]
+    return to_field_list(vol.Schema({vol.Required(name): cv.byte}))[0]
 
 
 def _float_schema(name):
-    return voluptuous_serialize.convert(vol.Schema({vol.Required(name): float}))[0]
+    return to_field_list(vol.Schema({vol.Required(name): float}))[0]
 
 
 def _list_schema(name, values):
-    return voluptuous_serialize.convert(
+    return to_field_list(
         vol.Schema({vol.Required(name): vol.In(values)}),
         custom_serializer=cv.custom_serializer,
     )[0]
 
 
 def _multi_select_schema(name, values):
-    return voluptuous_serialize.convert(
+    return to_field_list(
         vol.Schema({vol.Optional(name): cv.multi_select(values)}),
         custom_serializer=cv.custom_serializer,
     )[0]
@@ -73,7 +70,7 @@ def _multi_select_schema(name, values):
 
 def _read_only_schema(name, value):
     """Return a constant value schema."""
-    return voluptuous_serialize.convert(vol.Schema({vol.Required(name): value}))[0]
+    return to_field_list(vol.Schema({vol.Required(name): value}))[0]
 
 
 def get_schema(prop, name, groups):
@@ -147,23 +144,15 @@ def property_to_dict(prop):
 
 def update_property(device, prop_name, value):
     """Update the value of a device property."""
-    if prop_name in device.operating_flags:
-        prop = device.operating_flags[prop_name]
-        if value is not None:
-            if prop.value_type == ToggleMode:
-                toggle_mode = getattr(ToggleMode, value.upper())
-                prop.new_value = toggle_mode
-            elif prop.value_type == RelayMode:
-                relay_mode = getattr(RelayMode, value.upper())
-                prop.new_value = relay_mode
-            else:
-                prop.new_value = value
-    elif prop_name in device.properties:
-        prop = device.properties[prop_name]
-        if value is not None:
-            prop.new_value = value
+    prop = device.configuration[prop_name]
+    if prop.value_type == ToggleMode:
+        toggle_mode = getattr(ToggleMode, value.upper())
+        prop.new_value = toggle_mode
+    elif prop.value_type == RelayMode:
+        relay_mode = getattr(RelayMode, value.upper())
+        prop.new_value = relay_mode
     else:
-        _LOGGER.error("Property %s could not be found", prop_name)
+        prop.new_value = value
 
 
 @websocket_api.websocket_command(
@@ -185,6 +174,7 @@ async def websocket_get_properties(
         notify_device_not_found(connection, msg, INSTEON_DEVICE_NOT_FOUND)
         return
 
+    # Fork: always expose advanced properties in the panel.
     properties, schema = get_properties(device, True)
 
     connection.send_result(msg[ID], {"properties": properties, "schema": schema})
@@ -293,6 +283,8 @@ async def websocket_reset_properties(
         notify_device_not_found(connection, msg, INSTEON_DEVICE_NOT_FOUND)
         return
 
+    for prop in device.configuration.values():
+        prop.new_value = None
     for prop in device.operating_flags:
         device.operating_flags[prop].new_value = None
     for prop in device.properties:

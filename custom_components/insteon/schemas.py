@@ -72,7 +72,6 @@ TRIGGER_SCENE_SCHEMA = vol.Schema(
 
 ADD_DEFAULT_LINKS_SCHEMA = vol.Schema({vol.Required(CONF_ENTITY_ID): cv.entity_id})
 
-
 UPDATE_PROPERTY_SCHEMA = vol.Schema(
     {
         vol.Required(CONF_TARGET_DEVICE): cv.string,

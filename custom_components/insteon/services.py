@@ -116,6 +116,10 @@ def _coerce_property_value(prop, raw: str):
             raise ValueError(
                 f"expected one of {[m.name.lower() for m in value_type]}, got {raw!r}"
             ) from err
+    if value_type is list:
+        # radio_button_groups: a list of button groups. Not expressible as one
+        # text field; the Insteon panel edits it with a proper multi-select.
+        raise ValueError("list-valued properties can only be set from the Insteon panel")
     return raw
 
 

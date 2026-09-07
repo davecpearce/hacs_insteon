@@ -111,6 +111,7 @@ async def test_mode_property(hass: HomeAssistant, kpl_properties_data) -> None:
         ("led_off", "maybe", "Invalid value"),
         (RAMP_RATE_IN_SEC, "fast", "Invalid value"),
         (f"{TOGGLE_BUTTON}_c", "sideways", "Invalid value"),
+        ("radio_button_groups", "1,2", "Insteon panel"),
     ],
 )
 async def test_bad_input_raises(

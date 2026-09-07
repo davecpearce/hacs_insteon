@@ -37,6 +37,79 @@ data:
 Raises `ServiceValidationError` if the device, address, or property is not found, or if
 the device rejects the write.
 
+### Property names and values
+
+`prop_name` is the name the Insteon panel shows for the device, and the set available
+depends on the device type. In the Actions panel both fields are dropdowns you can also
+type into: `prop_name` lists every known property, `prop_value` lists the fixed choices
+(booleans and mode names) and takes numbers as free text. `prop_value` is always text; it
+is parsed by the property's type:
+
+| Type | Accepted `prop_value` |
+|---|---|
+| bool | `true` / `false`, also `on` / `off`, `yes` / `no`, `1` / `0` |
+| int | a whole number, e.g. `on_level` is 0 to 255 |
+| float | a decimal, e.g. `ramp_rate_in_seconds` `4.5` |
+| ToggleMode | `toggle`, `on_only`, `off_only` |
+| RelayMode | `latching`, `momentary_a`, `momentary_b`, `momentary_c` |
+| list | not supported by the action; `radio_button_groups` is edited in the panel |
+
+Properties exposed by pyinsteon 1.6.4, grouped by device family. Per-button properties
+take a suffix: `toggle_button_a` through `toggle_button_h`.
+
+**Dimmers, switches and keypads** (SwitchLinc, KeypadLinc, LampLinc, outlets)
+
+| Property | Type | Property | Type |
+|---|---|---|---|
+| `led_off` | bool | `led_dimming` | int |
+| `on_level` | int (dimmers) | `ramp_rate_in_seconds` | float (dimmers) |
+| `toggle_button_a` … `_h` | ToggleMode (keypads) | `radio_button_groups` | list (keypads, panel only) |
+| `program_lock_on` | bool | `key_beep_on` | bool |
+| `resume_dim_on` | bool | `load_sense_on` | bool (dimmers) |
+| `blink_on_tx_on` | bool | `blink_on_error_on` / `blink_on_error_off` | bool |
+| `powerline_disable_on` | bool | `rf_disable_on` | bool |
+| `x10_off` | bool (dimmers) | `cleanup_report_on` | bool (dimmers) |
+| `reversed_on` | bool (switches) | `three_way_on` | bool (switches) |
+| `dual_line_on` | bool (switches) | `momentary_line_on` | bool (switches) |
+| `crc_error_count`, `signal_to_noise_failure_count`, `database_delta` | int, read-only (dimmers) | | |
+
+**I/O Linc** (relay/sensor modules)
+
+| Property | Type |
+|---|---|
+| `relay_mode` | RelayMode |
+| `momentary_delay` | float |
+| `sense_sends_off` | bool |
+| `program_lock_on`, `blink_on_tx_on`, `x10_off` | bool |
+
+**Sensors** (motion, open/close, leak, door)
+
+| Property | Type |
+|---|---|
+| `led_on`, `led_brightness` | bool, int |
+| `motion_timeout`, `hardware_timeout` | int |
+| `light_sensitivity`, `hardware_light_sensitivity`, `ambient_light_intensity` | int |
+| `night_mode_only`, `hardware_night_mode` | bool |
+| `send_on_only_on`, `hardware_send_on_only` | bool |
+| `two_groups_on`, `multi_send_on`, `repeat_open_on`, `repeat_closed_on` | bool |
+| `link_to_ff_group`, `ignore_jumper_on`, `software_support_on`, `cleanup_report_on`, `hardware_led_off`, `program_lock_on` | bool |
+| `battery_level` | int, read-only |
+
+**Remotes and mini-remotes**: `led_on`, `key_beep_on`, `grouped_on`, `stay_awake_on`,
+`send_on_only_on`, `program_lock_on` (all bool).
+
+**Thermostats**: `backlight`, `change_delay` (int); `celsius`, `time_24_hour_format`,
+`button_lock_on`, `key_beep_on`, `led_on`, `program_lock_on` (bool).
+
+**Window coverings** (micro open/close): `on_level`, `duration_high`, `duration_low` (int);
+`ramp_rate_in_seconds` (float); `forward_on`, `not_3_way`, `dual_line_on`,
+`momentary_line_on`, `led_off`, `blink_on_tx_on`, `blink_on_error_off`, `key_beep_on`,
+`program_lock_on` (bool).
+
+**Modem** (PLM or Hub): `auto_led`, `deadman`, `disable_auto_linking`, `monitor_mode` (bool).
+
+Read-only properties are shown in the panel but rejected by the device on write.
+
 ## Other differences from core
 
 Documented here so they are deliberate rather than accidental. Measured against
@@ -51,6 +124,15 @@ core `2026.9.1`, which v1.1 is based on.
 | `brand/` | Insteon icon, the same asset core uses | Required by HACS |
 
 Everything else is byte-identical to core 2026.9.1.
+
+## Changes in v1.1.2
+
+- **Dropdowns in the Actions panel** for `prop_name` (every known property) and
+  `prop_value` (booleans and mode names), both still accepting typed values.
+- **List-valued properties are rejected with a clear message** instead of being written as
+  text. `radio_button_groups` is the only one; edit it in the Insteon panel.
+- Property reference tables in this README, generated from pyinsteon 1.6.4.
+- `scripts/upstream-diff.sh` and `UPSTREAM_BASE` for checking each Home Assistant release.
 
 ## Changes in v1.1.1
 
@@ -131,3 +213,33 @@ Each run clones core at that tag, builds a venv, generates translations, runs th
 suite on stock core for a baseline, then again with this `custom_components/insteon`
 swapped in. Expected result: everything stock passes also passes here, plus this
 repo's own tests. See the release notes for the exact numbers per tag.
+
+Known upstream flake: on core 2026.9.1, `test_api_properties.py::test_get_read_only_properties`
+sometimes reports a lingering-task error at teardown when the file runs as a whole. Stock
+core shows the same, and the test passes in isolation.
+
+## Keeping up with Home Assistant releases
+
+This integration shadows core, so every core release can change the files it is based
+on. `UPSTREAM_BASE` records the core tag the current code was taken from. On each new
+Home Assistant release:
+
+```bash
+scripts/upstream-diff.sh 2026.10.0
+```
+
+That prints what changed in core's Insteon integration since the base tag, whether the
+pinned requirements or Python version moved, and how this repo's copies of the touched
+files differ from the new core. Then:
+
+- **No upstream changes**: nothing to do. Optionally run `scripts/run-upstream-tests.sh
+  <tag>` to prove it, then bump `UPSTREAM_BASE` and `hacs.json`.
+- **Upstream changed files**: copy the new core files over `custom_components/insteon`,
+  re-apply the fork touches listed under *Other differences from core* (they are small:
+  the `compat.py` import in two `api/` files, the `update_property` action across
+  `const.py`, `schemas.py`, `services.py`, `services.yaml`, `strings.json`, the
+  `light.py` debug logging, and the `manifest.json` packaging keys), run
+  `scripts/run-upstream-tests.sh <tag>` and expect zero failures, then bump
+  `UPSTREAM_BASE`, the manifest version, tag, and release.
+- **Requirements or Python moved**: same as above; the test script picks up the new
+  interpreter from core's `pyproject.toml`.

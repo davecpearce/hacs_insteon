@@ -108,6 +108,9 @@ async def async_register_insteon_frontend(
             hass=hass,
             frontend_url_path=DOMAIN,
             webcomponent_name="insteon-frontend",
+            # Fork: a sidebar entry as well as the integration's Configure link.
+            sidebar_title="Insteon",
+            sidebar_icon="mdi:home-lightning-bolt",
             config_panel_domain=DOMAIN,
             module_url=f"{URL_BASE}/entrypoint.{build_id}.js",
             embed_iframe=True,

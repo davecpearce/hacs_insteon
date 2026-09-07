@@ -120,10 +120,17 @@ core `2026.9.1`, which v1.1 is based on.
 | `services.py`, `schemas.py`, `const.py`, `services.yaml`, `strings.json` | `update_property` action | Feature |
 | `compat.py`, `api/config.py`, `api/properties.py` | Schema serialisation goes through a shim that imports `probatio` (HA 2026.9+) and falls back to `voluptuous_serialize` (HA 2026.8) | One build runs on both HA versions |
 | `light.py` | Debug logging of brightness in `brightness` and `async_turn_on` | Harmless diagnostics |
+| `api/__init__.py` | Registers the Insteon panel with a sidebar title and icon, so it appears in the sidebar as well as behind the integration's Configure gear | Feature |
 | `manifest.json` | Adds `version` and `issue_tracker`, points `documentation` at this repo | Required for custom components |
 | `brand/` | Insteon icon, the same asset core uses | Required by HACS |
 
 Everything else is byte-identical to core 2026.9.1.
+
+## Changes in v1.1.3
+
+- **The Insteon panel is back in the sidebar.** Core registers it only behind the
+  integration's Configure gear; this fork also gives it a sidebar title and icon. No
+  iframe involved, so no nested Home Assistant chrome. The gear link still works.
 
 ## Changes in v1.1.2
 
@@ -236,7 +243,8 @@ files differ from the new core. Then:
   <tag>` to prove it, then bump `UPSTREAM_BASE` and `hacs.json`.
 - **Upstream changed files**: copy the new core files over `custom_components/insteon`,
   re-apply the fork touches listed under *Other differences from core* (they are small:
-  the `compat.py` import in two `api/` files, the `update_property` action across
+  the `compat.py` import in two `api/` files, the sidebar title and icon in
+  `api/__init__.py`, the `update_property` action across
   `const.py`, `schemas.py`, `services.py`, `services.yaml`, `strings.json`, the
   `light.py` debug logging, and the `manifest.json` packaging keys), run
   `scripts/run-upstream-tests.sh <tag>` and expect zero failures, then bump

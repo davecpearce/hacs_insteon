@@ -50,7 +50,7 @@ core `2026.8.3`.
 | `light.py` | Debug logging of brightness in `brightness` and `async_turn_on` | Harmless |
 | `__init__.py` | Leftover YAML-import options migration (`SOURCE_IMPORT`) | Dead code; never triggers |
 | `entity.py`, `utils.py`, `api/aldb.py`, `api/config.py`, `services.py` | Uses `via_device=` and `async_get_device(identifiers=)` instead of core's `via_device_id=` / `async_get_device_by_identifier(..., config_entry_id)` | Drift; `via_device` is deprecated in 2026.8 and removed in 2027.8. To be re-aligned in v1.1 |
-| `manifest.json` | Adds `version` (required for custom components), drops `@connorgallopo` from codeowners | Packaging |
+| `manifest.json` | Adds `version` and `issue_tracker` (required for custom components), points `documentation` at this repo, drops `@connorgallopo` from codeowners | Packaging |
 
 `api/scenes.py` is byte-identical to core and is **not** a fork addition.
 
